@@ -1,9 +1,28 @@
 {
+  "name": "@arthur-lobo/use-zod-search-params",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "author": "Arthur Lobo <64273139+ArthurLobopro@users.noreply.github.com>",
+  "license": "MIT",
+  "description": "React Hook to easily manipulate typed URL Search Params with zod.",
+  "keywords": [
+    "zod",
+    "react",
+    "search params",
+    "query"
+  ],
+  "scripts": {
+    "prepack": "tsc"
+  },
   "dependencies": {
     "react-router-dom": "^7.13.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/react-router-dom": "^5.3.3"
+    "@types/react-router-dom": "^5.3.3",
+    "typescript": "^5.9.3"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

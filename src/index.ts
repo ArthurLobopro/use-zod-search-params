@@ -1,13 +1,7 @@
 import { useSearchParams } from "react-router-dom";
-import type z from "zod";
+import z from "zod";
 
-function parseValuesToString(
-  obj: Record<string, { toString(): string; }>,
-) {
-  return Object.fromEntries(
-    Object.entries(obj).map(([key, value]) => [key, value.toString()]),
-  );
-}
+
 
 type BaseAllowedTypes =
   | z.ZodString
@@ -19,19 +13,18 @@ type MiddleTypes =
   | z.ZodDefault<BaseAllowedTypes>
   | z.ZodNullable<BaseAllowedTypes>;
 
+// Allow to Agregate .nullable().default()
 type AllowedTypes =
   | MiddleTypes
   | z.ZodDefault<MiddleTypes>
   | z.ZodNullable<MiddleTypes>;
 
-const toObject = (search: URLSearchParams) =>
-  Object.fromEntries(
-    Array.from(search.entries()).filter(([_key, value]) => !!value),
-  );
+type SnakeToCamel<S extends string> = S extends `${infer Head}_${infer Tail}` ? `${Head}${Capitalize<SnakeToCamel<Tail>>}` : S;
+type SetterName<T extends string> = `set${Capitalize<SnakeToCamel<T>>}`;
 
-type SetterName<T extends string> = `set${Capitalize<T>}`;
-const setterName = <T extends string>(str: T) =>
-  `set${str[0].toUpperCase()}${str.slice(1)}` as SetterName<T>;
+const setterName = <T extends string>(str: T) => {
+  return `set${str[0]!.toUpperCase()}${str.slice(1).replace(/_([a-z0-9])/g, (g) => g[1]!.toUpperCase())}` as SetterName<T>;
+};
 
 export function useZodSearchParams<
   T extends Record<string, AllowedTypes>,
@@ -67,8 +60,20 @@ export function useZodSearchParams<
 
   return {
     params: schema.parse(toObject(searchParams)),
-    setParams: setPartial,
-    getSetter,
     setters,
+    setParams: setPartial,
   };
+}
+
+const toObject = (search: URLSearchParams) =>
+  Object.fromEntries(
+    Array.from(search.entries()).filter(([_key, value]) => !!value),
+  );
+
+function parseValuesToString(
+  obj: Record<string, { toString(): string; }>,
+) {
+  return Object.fromEntries(
+    Object.entries(obj).map(([key, value]) => [key, value.toString()]),
+  );
 }
