@@ -1,5 +1,5 @@
 import { useSearchParams } from "react-router-dom";
-import z from "zod";
+import type z from "zod";
 
 type BaseAllowedTypes =
   | z.ZodString
@@ -17,11 +17,17 @@ type AllowedTypes =
   | z.ZodDefault<MiddleTypes>
   | z.ZodNullable<MiddleTypes>;
 
-type SnakeToCamel<S extends string> = S extends `${infer Head}_${infer Tail}` ? `${Head}${Capitalize<SnakeToCamel<Tail>>}` : S;
+type SnakeToCamel<S extends string> = S extends `${infer Head}_${infer Tail}`
+  ? `${Head}${Capitalize<SnakeToCamel<Tail>>}`
+  : S;
 type SetterName<T extends string> = `set${Capitalize<SnakeToCamel<T>>}`;
 
 const setterName = <T extends string>(str: T) => {
-  return `set${str[0]!.toUpperCase()}${str.slice(1).replace(/_([a-z0-9])/g, (g) => g[1]!.toUpperCase())}` as SetterName<T>;
+  return [
+    "set",
+    str[0]!.toUpperCase(),
+    str.slice(1).replace(/_([a-z0-9])/g, (g) => g[1]!.toUpperCase()),
+  ].join("") as SetterName<T>;
 };
 
 export function useZodSearchParams<
@@ -68,10 +74,10 @@ const toObject = (search: URLSearchParams) =>
     Array.from(search.entries()).filter(([_key, value]) => !!value),
   );
 
-function parseValuesToString(
-  obj: Record<string, { toString(): string; }>,
-) {
+function parseValuesToString(obj: Record<string, { toString(): string }>) {
   return Object.fromEntries(
-    Object.entries(obj).filter(([_key, value]) => !!value).map(([key, value]) => [key, value.toString()]),
+    Object.entries(obj)
+      .filter(([_key, value]) => !!value)
+      .map(([key, value]) => [key, value.toString()]),
   );
 }
