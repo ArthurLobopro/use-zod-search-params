@@ -1,8 +1,6 @@
 import { useSearchParams } from "react-router-dom";
 import z from "zod";
 
-
-
 type BaseAllowedTypes =
   | z.ZodString
   | z.ZodCoercedNumber
@@ -48,7 +46,7 @@ export function useZodSearchParams<
   }
 
   const setters = {} as {
-    [Key in K as `set${Capitalize<string & Key>}`]: (
+    [Key in K as SetterName<string & Key>]: (
       value: z.infer<S["shape"][Key]>,
     ) => void;
   };
@@ -74,6 +72,6 @@ function parseValuesToString(
   obj: Record<string, { toString(): string; }>,
 ) {
   return Object.fromEntries(
-    Object.entries(obj).map(([key, value]) => [key, value.toString()]),
+    Object.entries(obj).filter(([_key, value]) => !!value).map(([key, value]) => [key, value.toString()]),
   );
 }
