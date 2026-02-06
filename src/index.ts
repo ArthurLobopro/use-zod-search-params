@@ -39,10 +39,12 @@ export function useZodSearchParams<
 
   function setPartial(data: Partial<z.infer<S>>) {
     setSearchParams(
-      parseValuesToString({
-        ...toObject(searchParams),
-        ...data,
-      }),
+      parseValuesToString(
+        schema.parse({
+          ...toObject(searchParams),
+          ...data,
+        }),
+      ),
     );
   }
 
@@ -74,10 +76,11 @@ const toObject = (search: URLSearchParams) =>
     Array.from(search.entries()).filter(([_key, value]) => !!value),
   );
 
-function parseValuesToString(obj: Record<string, { toString(): string }>) {
+// biome-ignore lint/suspicious/noExplicitAny: Literally any
+function parseValuesToString(obj: Record<string, any>) {
   return Object.fromEntries(
     Object.entries(obj)
       .filter(([_key, value]) => !!value)
-      .map(([key, value]) => [key, value.toString()]),
+      .map(([key, value]) => [key, String(value)]),
   );
 }
