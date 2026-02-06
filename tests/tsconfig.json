@@ -16,7 +16,6 @@
       "@/*": ["./*"]
     },
     "rootDir": ".",
-    "composite": true
   },
   "include": [".", "../src/*.ts"]
 }

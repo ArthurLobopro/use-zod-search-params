@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "rootDir": "src",
+    "rootDir": "./src",
     "outDir": "./dist",
 
     "module": "es2020",
@@ -11,6 +11,7 @@
     "sourceMap": false,
     "declaration": true,
     "declarationMap": false,
+    "esModuleInterop": true,
 
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
@@ -24,5 +25,4 @@
     "moduleResolution": "bundler",
     "skipLibCheck": true
   },
-  "include": ["src"]
 }
