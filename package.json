@@ -1,7 +1,6 @@
 {
   "name": "@arthur-lobo/use-zod-search-params",
   "version": "1.0.0",
-  "main": "./dist/index.js",
   "author": "Arthur Lobo <64273139+ArthurLobopro@users.noreply.github.com>",
   "license": "MIT",
   "description": "React Hook to easily manipulate typed URL Search Params with zod.",
@@ -12,6 +11,7 @@
     "query"
   ],
   "scripts": {
+    "build": "tsc --emitDeclarationOnly && node build.js",
     "prepack": "tsc",
     "lint": "biome check",
     "lint:fix": "biome check --write"
@@ -36,11 +36,7 @@
   "files": [
     "dist"
   ],
-  "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    }
-  }
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts"
 }

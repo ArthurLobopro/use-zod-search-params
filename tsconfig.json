@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "rootDir": "./src",
-    "outDir": "./dist",
+    "outDir": "dist",
 
     "module": "es2020",
     "target": "esnext",
@@ -10,13 +10,11 @@
 
     "sourceMap": false,
     "declaration": true,
-    "declarationMap": false,
-    "esModuleInterop": true,
+    "declarationMap": false,  
 
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
 
-    "composite": true,
     "strict": true,
     "jsx": "react-jsx",
     "isolatedModules": true,
@@ -25,4 +23,6 @@
     "moduleResolution": "bundler",
     "skipLibCheck": true
   },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "tests"]
 }
