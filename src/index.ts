@@ -42,7 +42,13 @@ export function useZodSearchParams<
 
     for (const key in data) {
       //@ts-expect-error Trust me TypeScript
-      params.set(key, schema.shape[key].parse(data[key]));
+      const parsedValue = schema.shape[key].parse(data[key]);
+
+      if (parsedValue) {
+        params.set(key, parsedValue as string);
+      } else {
+        params.delete(key);
+      }
     }
     setSearchParams(params);
   }
