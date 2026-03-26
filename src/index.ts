@@ -38,14 +38,13 @@ export function useZodSearchParams<
   const [searchParams, setSearchParams] = useSearchParams();
 
   function setPartial(data: Partial<z.infer<S>>) {
-    setSearchParams(
-      parseValuesToString(
-        schema.parse({
-          ...toObject(searchParams),
-          ...data,
-        }),
-      ),
-    );
+    const params = new URLSearchParams(searchParams);
+
+    for (const key in data) {
+      //@ts-expect-error Trust me TypeScript
+      params.set(key, schema.shape[key].parse(data[key]));
+    }
+    setSearchParams(params);
   }
 
   function getSetter<K extends keyof S["shape"]>(key: K) {
