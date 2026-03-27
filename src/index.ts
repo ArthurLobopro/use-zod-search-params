@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import type z from "zod";
+import type { ZodDefault, z } from "zod";
 
 type BaseAllowedTypes =
   | z.ZodString
@@ -113,13 +113,13 @@ export function useZodSearchParams<
               return schema.shape[key]?.parse(searchValue);
             }
 
-            return schema.shape[key]?.def?.defaultValue ?? null;
+            return (schema.shape[key] as ZodDefault)?.def?.defaultValue ?? null;
           } catch (error) {
             if (options.onParseError === "throw") {
               throw error;
             }
 
-            return schema.shape[key]?.def?.defaultValue ?? null;
+            return (schema.shape[key] as ZodDefault)?.def?.defaultValue ?? null;
           }
         },
         enumerable: true,
