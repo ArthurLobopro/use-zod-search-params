@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import type z from "zod";
 
@@ -30,12 +31,41 @@ const setterName = <T extends string>(str: T) => {
   ].join("") as SetterName<T>;
 };
 
+interface UseZodSearchOptions {
+  onParseError: "throw" | "clean";
+}
+
+const DEFAULT_OPTIONS = {
+  onParseError: "clean",
+} satisfies UseZodSearchOptions;
+
 export function useZodSearchParams<
   T extends Record<string, AllowedTypes>,
   S extends z.ZodObject<T>,
   K extends keyof S["shape"],
->(schema: S) {
+>(schema: S, options: UseZodSearchOptions = DEFAULT_OPTIONS) {
   const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    let hasChanged = false;
+
+    for (const key of Object.keys(schema.shape) as K[]) {
+      try {
+        schema.shape[key]?.parse(searchParams.get(key as string));
+      } catch (error) {
+        if (options.onParseError === "throw") {
+          throw error;
+        }
+
+        hasChanged = true;
+        searchParams.delete(key as string);
+      }
+    }
+
+    if (hasChanged) {
+      setSearchParams(searchParams);
+    }
+  }, []);
 
   function setPartial(data: Partial<z.infer<S>>) {
     const params = new URLSearchParams(searchParams);
@@ -45,7 +75,7 @@ export function useZodSearchParams<
       const parsedValue = schema.shape[key].parse(data[key]);
 
       if (parsedValue) {
-        params.set(key, parsedValue as string);
+        params.set(key, String(parsedValue));
       } else {
         params.delete(key);
       }
@@ -69,23 +99,41 @@ export function useZodSearchParams<
     setters[setterName(key)] = getSetter(key);
   }
 
+  const params = useMemo(() => {
+    const obj = {} as z.infer<S>;
+
+    for (const key of Object.keys(schema.shape) as K[]) {
+      Object.defineProperty(obj, key, {
+        get() {
+          try {
+            const hasValue = searchParams.has(key as string);
+            const searchValue = searchParams.get(key as string);
+
+            if (hasValue && searchValue) {
+              return schema.shape[key]?.parse(searchValue);
+            }
+
+            return schema.shape[key]?.def?.defaultValue ?? null;
+          } catch (error) {
+            if (options.onParseError === "throw") {
+              throw error;
+            }
+
+            return schema.shape[key]?.def?.defaultValue ?? null;
+          }
+        },
+        enumerable: true,
+      });
+    }
+
+    return obj;
+  }, [searchParams, schema]);
+
+  console.log(params);
+
   return {
-    params: schema.parse(toObject(searchParams)),
+    params,
     setters,
     setParams: setPartial,
   };
-}
-
-const toObject = (search: URLSearchParams) =>
-  Object.fromEntries(
-    Array.from(search.entries()).filter(([_key, value]) => !!value),
-  );
-
-// biome-ignore lint/suspicious/noExplicitAny: Literally any
-function parseValuesToString(obj: Record<string, any>) {
-  return Object.fromEntries(
-    Object.entries(obj)
-      .filter(([_key, value]) => !!value)
-      .map(([key, value]) => [key, String(value)]),
-  );
 }
