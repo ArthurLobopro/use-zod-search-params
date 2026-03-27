@@ -65,7 +65,7 @@ export function useZodSearchParams<
     if (hasChanged) {
       setSearchParams(searchParams);
     }
-  }, []);
+  }, [searchParams]);
 
   function setPartial(data: Partial<z.infer<S>>) {
     const params = new URLSearchParams(searchParams);
