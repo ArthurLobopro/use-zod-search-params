@@ -129,8 +129,6 @@ export function useZodSearchParams<
     return obj;
   }, [searchParams, schema]);
 
-  console.log(params);
-
   return {
     params,
     setters,
