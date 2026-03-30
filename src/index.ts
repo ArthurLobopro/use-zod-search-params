@@ -11,7 +11,6 @@ const DEFAULT_OPTIONS = {
 export function useZodSearchParams<
   T extends Record<string, AllowedTypes>,
   S extends z.ZodObject<T>,
-  K extends keyof S["shape"],
 >(schema: S, options: UseZodSearchOptions = DEFAULT_OPTIONS) {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -25,38 +24,10 @@ export function useZodSearchParams<
     [searchParams, schema],
   );
 
-  function setPartial(data: Partial<z.infer<S>>) {
-    const params = new URLSearchParams(searchParams);
-
-    for (const key in data) {
-      //@ts-expect-error Trust me TypeScript
-      const parsedValue = schema.shape[key].parse(data[key]);
-
-      if (parsedValue) {
-        params.set(key, String(parsedValue));
-      } else {
-        params.delete(key);
-      }
-    }
-
-    setSearchParams(params);
-  }
-
-  function getSetter<K extends keyof S["shape"]>(key: K) {
-    return (v: z.infer<S["shape"][K]>) =>
-      setPartial({ [key]: v } as Partial<z.infer<S>>);
-  }
-
-  const setters = {} as {
-    [Key in K as SetterName<string & Key>]: (
-      value: z.infer<S["shape"][Key]>,
-    ) => void;
-  };
-
-  for (const key of Object.keys(schema.shape) as K[]) {
-    //@ts-expect-error Trust me TypeScript
-    setters[SetterNameFactory(key)] = getSetter(key);
-  }
+  const { setPartial, setters } = useMemo(
+    ParamsSetterFactoryFactory(schema, searchParams, setSearchParams),
+    [schema, searchParams],
+  );
 
   return {
     params,
@@ -132,6 +103,60 @@ function ParamsGetterObjectFunctionFactory<
     }
 
     return obj;
+  };
+}
+
+function ParamsSetterFactoryFactory<
+  T extends Record<string, AllowedTypes>,
+  S extends z.ZodObject<T>,
+  K extends keyof S["shape"],
+>(schema: S, params: URLSearchParams, setParams: SetURLSearchParams) {
+  return () => {
+    function setPartial(data: Partial<z.infer<S>>) {
+      const newParams = new URLSearchParams(params);
+
+      for (const key in data) {
+        //@ts-expect-error Trust me TypeScript
+        const parsedValue = schema.shape[key].parse(data[key]);
+
+        if (parsedValue) {
+          newParams.set(key, String(parsedValue));
+        } else {
+          newParams.delete(key);
+        }
+      }
+
+      setParams(newParams);
+    }
+
+    function getSetter<K extends keyof S["shape"]>(key: string & K) {
+      return (v: z.infer<S["shape"][K]>) => {
+        const newParams = new URLSearchParams(params);
+
+        const parsedValue = schema.shape[key]!.parse(v);
+
+        if (parsedValue) {
+          newParams.set(key, String(parsedValue));
+        } else {
+          newParams.delete(key);
+        }
+
+        setParams(newParams);
+      };
+    }
+
+    const setters = {} as {
+      [Key in K as SetterName<string & Key>]: (
+        value: z.infer<S["shape"][Key]>,
+      ) => void;
+    };
+
+    for (const key of Object.keys(schema.shape) as K[]) {
+      //@ts-expect-error Trust me TypeScript
+      setters[SetterNameFactory(key)] = getSetter(key);
+    }
+
+    return { setPartial, setters };
   };
 }
 
