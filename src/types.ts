@@ -25,5 +25,6 @@ export type SetterName<T extends string> = `set${Capitalize<SnakeToCamel<T>>}`;
 
 export interface UseZodSearchOptions {
   onParseError: "throw" | "clean";
+  onSetValueError: "throw" | "ignore";
   clearDefaults?: boolean;
 }
