@@ -6,10 +6,12 @@ import {
   Search,
 } from "lucide-react";
 import type React from "react";
+import { useState } from "react";
 import z from "zod";
 import { useZodSearchParams } from "../../src/index";
 import { cn, formatDate } from "../lib/utils";
 import { UserRole, UserStatus } from "../types";
+import { type EnabledState, EnableSelect } from "./EnableSelect";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import {
@@ -29,11 +31,18 @@ const UserListParams = z.object({
 });
 
 const UserTable: React.FC = () => {
+  const [throwParseError, setThrowParseError] = useState<EnabledState>("off");
+  const [cleanDefaultValues, setCleanDefaultValues] =
+    useState<EnabledState>("off");
+
   const {
     params: { search, page, page_items },
     setters: { setPage, setPageItems },
     setParams,
-  } = useZodSearchParams(UserListParams);
+  } = useZodSearchParams(UserListParams, {
+    clearDefaults: cleanDefaultValues === "on",
+    onParseError: throwParseError === "on" ? "throw" : "clean",
+  });
 
   const { currentData, endIndex, totalItems, startIndex, totalPages } =
     useUsers({ search, page_items, page });
@@ -61,6 +70,19 @@ const UserTable: React.FC = () => {
 
   return (
     <div className="w-full space-y-4">
+      <div className="px-6 py-3 border-b border-slate-100 flex justify-between text-sm">
+        <div className="flex gap-2 items-center">
+          Throw errors on parse
+          <EnableSelect value={throwParseError} onChange={setThrowParseError} />
+        </div>
+        <div className="flex gap-2 items-center">
+          Clean Default Values
+          <EnableSelect
+            value={cleanDefaultValues}
+            onChange={setCleanDefaultValues}
+          />
+        </div>
+      </div>
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-6 border-b border-slate-100">
         <div className="relative w-full sm:w-72">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
