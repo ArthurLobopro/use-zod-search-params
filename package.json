@@ -1,6 +1,6 @@
 {
   "name": "@arthur-lobo/use-zod-search-params",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "Arthur Lobo <64273139+ArthurLobopro@users.noreply.github.com>",
   "license": "MIT",
   "description": "React Hook to easily manipulate typed URL Search Params with zod.",
