@@ -148,11 +148,13 @@ function ParamsSetterFactoryFactory<
       try {
         const parsedValue = schema.shape[key]!.parse(value);
 
-        if (
-          options.clearDefaults &&
-          isDefault(schema.shape[key]) &&
-          getDefaultValue(schema.shape[key]) === parsedValue
-        ) {
+        const shouldClearValue =
+          ["", null].includes(parsedValue as any) ||
+          (options.clearDefaults &&
+            isDefault(schema.shape[key]) &&
+            getDefaultValue(schema.shape[key]) === parsedValue);
+
+        if (shouldClearValue) {
           params.delete(key);
         } else {
           params.set(key, String(parsedValue));
@@ -207,7 +209,6 @@ const SetterNameFactory = <T extends string>(str: T) => {
   ].join("") as SetterName<T>;
 };
 
-// biome-ignore lint/suspicious/noExplicitAny: v must be any because it's a type guard function
 function isDefault(v: any): v is ZodDefault {
   return (v as ZodDefault)?.def?.defaultValue !== undefined;
 }
