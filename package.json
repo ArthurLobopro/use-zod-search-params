@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "build": "tsc --emitDeclarationOnly && node build.js",
+    "build:check": "tsc --noEmit",
     "prepack": "tsc",
     "lint": "biome check",
     "lint:fix": "biome check --write"
