@@ -7,7 +7,7 @@ const baseConfig = {
   sourcemap: false,
   target: ["es2020"],
   tsconfig: "tsconfig.json",
-  external: ["react-router-dom", "zod"],
+  external: ["react-router", "zod"],
 };
 
 async function build() {

@@ -1,6 +1,6 @@
 # use-zod-search-params
 
-A small React Hook to synchronize and validate URL search parameters using `react-router-dom` and `zod`.
+A small React Hook to synchronize and validate URL search parameters using `react-router` and `zod`.
 
 ---
 
@@ -24,7 +24,7 @@ Basic TypeScript example:
 
 ```tsx
 import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router";
 import { z } from "zod";
 import { useZodSearchParams } from "@arthur-lobo/use-zod-search-params";
 

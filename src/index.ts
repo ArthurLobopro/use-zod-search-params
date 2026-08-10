@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { type SetURLSearchParams, useSearchParams } from "react-router-dom";
+import { type SetURLSearchParams, useSearchParams } from "react-router";
 import type { ZodDefault, z } from "zod";
 import type { AllowedTypes, SetterName, UseZodSearchOptions } from "./types";
 
