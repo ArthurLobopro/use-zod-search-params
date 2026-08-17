@@ -1,7 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { describe, expect, test, vi } from "vitest";
-import AdvancedPage from "./pages/AdvancedPage";
 import BasicPage from "./pages/BasicPage";
 import ClearDefaultsPage from "./pages/ClearDefaultsPage";
 import StrictPage from "./pages/StrictPage";
@@ -142,14 +141,14 @@ describe("useZodSearchParams - Integration Tests using Test App Pages", () => {
     consoleSpy.mockRestore();
   });
 
-  test("AdvancedPage: validates and applies enum filter inputs", async () => {
+  test("BasicPage: validates and applies enum filter inputs", async () => {
     render(
       <MemoryRouter initialEntries={["/"]}>
-        <AdvancedPage />
+        <BasicPage />
       </MemoryRouter>,
     );
 
-    // Check that advanced filters are rendered
+    // Check that filters are rendered (now part of BasicPage)
     const roleFilter = screen.getByTestId("role-filter");
     const statusFilter = screen.getByTestId("status-filter");
     expect(roleFilter).toBeInTheDocument();
