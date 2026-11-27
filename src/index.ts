@@ -1,6 +1,6 @@
-import { useEffect, useMemo } from "react";
+import { type MutableRefObject, useEffect, useMemo, useRef } from "react";
 import { type SetURLSearchParams, useSearchParams } from "react-router-dom";
-import type { ZodDefault, z } from "zod";
+import type { z } from "zod";
 import type { AllowedTypes, SetterName, UseZodSearchOptions } from "./types";
 
 const DEFAULT_OPTIONS = {
@@ -8,6 +8,23 @@ const DEFAULT_OPTIONS = {
   onSetValueError: "throw",
   clearDefaults: false,
 } satisfies UseZodSearchOptions;
+
+/**
+ * Tracks the most recent search params, including updates that were
+ * requested but not rendered yet. react-router's `setSearchParams` (even the
+ * functional form) builds on the params of the last render, so two setters
+ * called in the same tick would overwrite each other without this.
+ */
+interface ParamsState {
+  source: URLSearchParams;
+  latest: URLSearchParams;
+}
+
+interface HookRefs {
+  state: MutableRefObject<ParamsState>;
+  setSearchParams: MutableRefObject<SetURLSearchParams>;
+  options: MutableRefObject<UseZodSearchOptions>;
+}
 
 export function useZodSearchParams<
   T extends Record<string, AllowedTypes>,
@@ -17,10 +34,27 @@ export function useZodSearchParams<
 
   const parsedOptions: UseZodSearchOptions = { ...DEFAULT_OPTIONS, ...options };
 
-  useEffect(
-    UpdateParamsFactory(schema, parsedOptions, searchParams, setSearchParams),
-    [searchParams],
-  );
+  const stateRef = useRef<ParamsState>({
+    source: searchParams,
+    latest: searchParams,
+  });
+  if (stateRef.current.source !== searchParams) {
+    stateRef.current = { source: searchParams, latest: searchParams };
+  }
+
+  const setSearchParamsRef = useRef(setSearchParams);
+  setSearchParamsRef.current = setSearchParams;
+
+  const optionsRef = useRef(parsedOptions);
+  optionsRef.current = parsedOptions;
+
+  const refs: HookRefs = {
+    state: stateRef,
+    setSearchParams: setSearchParamsRef,
+    options: optionsRef,
+  };
+
+  useEffect(UpdateParamsFactory(schema, refs, searchParams), [searchParams]);
 
   const params = useMemo(
     ParamsGetterObjectFunctionFactory(schema, parsedOptions, searchParams),
@@ -28,13 +62,8 @@ export function useZodSearchParams<
   );
 
   const { setPartial, setters } = useMemo(
-    ParamsSetterFactoryFactory(
-      schema,
-      parsedOptions,
-      searchParams,
-      setSearchParams,
-    ),
-    [schema, searchParams],
+    ParamsSetterFactoryFactory(schema, refs),
+    [schema],
   );
 
   return {
@@ -48,32 +77,34 @@ function UpdateParamsFactory<
   T extends Record<string, AllowedTypes>,
   S extends z.ZodObject<T>,
   K extends keyof S["shape"],
->(
-  schema: S,
-  options: UseZodSearchOptions,
-  searchParams: URLSearchParams,
-  setSearchParams: SetURLSearchParams,
-) {
+>(schema: S, refs: HookRefs, searchParams: URLSearchParams) {
   return () => {
+    const options = refs.options.current;
+    // Never mutate the router's own instance.
+    const newParams = new URLSearchParams(searchParams);
     let hasChanged = false;
 
     for (const key of Object.keys(schema.shape) as K[]) {
-      const hasValue = searchParams.has(key as string);
+      const value = newParams.get(key as string);
 
-      if (!hasValue) continue;
+      if (value === null) continue;
 
-      const value = searchParams.get(key as string);
+      const valueSchema = schema.shape[key];
 
       try {
-        const parsedValue = schema.shape[key]?.parse(value);
+        const parsedValue = valueSchema?.parse(
+          deserializeValue(valueSchema, value),
+        );
+
+        const defaultInfo = findDefault(valueSchema);
 
         if (
-          isDefault(schema.shape[key]) &&
-          parsedValue === schema.shape[key]?.def.defaultValue &&
-          options.clearDefaults
+          options.clearDefaults &&
+          defaultInfo &&
+          parsedValue === defaultInfo.value
         ) {
           hasChanged = true;
-          searchParams.delete(key as string);
+          newParams.delete(key as string);
         }
       } catch (error) {
         if (options.onParseError === "throw") {
@@ -81,12 +112,15 @@ function UpdateParamsFactory<
         }
 
         hasChanged = true;
-        searchParams.delete(key as string);
+        newParams.delete(key as string);
       }
     }
 
     if (hasChanged) {
-      setSearchParams(searchParams);
+      refs.state.current.latest = newParams;
+      // Cleaning is a correction, not a navigation: don't create a history
+      // entry the user could go "back" into.
+      refs.setSearchParams.current(newParams, { replace: true });
     }
   };
 }
@@ -103,22 +137,24 @@ function ParamsGetterObjectFunctionFactory<
       Object.defineProperty(obj, key, {
         get() {
           const valueSchema = schema.shape[key];
+          const fallback = findDefault(valueSchema)?.value ?? null;
 
           try {
-            const hasValue = searchParams.has(key as string);
             const searchValue = searchParams.get(key as string);
 
-            if (hasValue && searchValue) {
-              return schema.shape[key]?.parse(searchValue);
+            if (searchValue) {
+              return valueSchema?.parse(
+                deserializeValue(valueSchema, searchValue),
+              );
             }
 
-            return isDefault(valueSchema) ? valueSchema.def.defaultValue : null;
+            return fallback;
           } catch (error) {
             if (options.onParseError === "throw") {
               throw error;
             }
 
-            return isDefault(valueSchema) ? valueSchema.def.defaultValue : null;
+            return fallback;
           }
         },
         enumerable: true,
@@ -133,26 +169,25 @@ function ParamsSetterFactoryFactory<
   T extends Record<string, AllowedTypes>,
   S extends z.ZodObject<T>,
   K extends keyof S["shape"],
->(
-  schema: S,
-  options: UseZodSearchOptions,
-  params: URLSearchParams,
-  setParams: SetURLSearchParams,
-) {
+>(schema: S, refs: HookRefs) {
   return () => {
     function setParamValue(
       key: string & K,
       value: z.infer<S["shape"][K]>,
       params: URLSearchParams,
     ) {
+      const options = refs.options.current;
+
       try {
-        const parsedValue = schema.shape[key]!.parse(value);
+        const valueSchema = schema.shape[key]!;
+        const parsedValue = valueSchema.parse(value);
+        const defaultInfo = findDefault(valueSchema);
 
         const shouldClearValue =
           ["", null].includes(parsedValue as any) ||
           (options.clearDefaults &&
-            isDefault(schema.shape[key]) &&
-            getDefaultValue(schema.shape[key]) === parsedValue);
+            defaultInfo !== undefined &&
+            defaultInfo.value === parsedValue);
 
         if (shouldClearValue) {
           params.delete(key);
@@ -166,23 +201,27 @@ function ParamsSetterFactoryFactory<
       }
     }
 
+    function commit(update: (params: URLSearchParams) => void) {
+      const newParams = new URLSearchParams(refs.state.current.latest);
+
+      update(newParams);
+
+      refs.state.current.latest = newParams;
+      refs.setSearchParams.current(newParams);
+    }
+
     function setPartial(data: Partial<z.infer<S>>) {
-      const newParams = new URLSearchParams(params);
-
-      for (const key in data) {
-        //@ts-expect-error Trust me TypeScript
-        setParamValue(key, data[key], newParams);
-      }
-
-      setParams(newParams);
+      commit((newParams) => {
+        for (const key in data) {
+          //@ts-expect-error Trust me TypeScript
+          setParamValue(key, data[key], newParams);
+        }
+      });
     }
 
     function getSetter(key: string & K) {
       return (v: z.infer<S["shape"][K]>) => {
-        const newParams = new URLSearchParams(params);
-
-        setParamValue(key, v, newParams);
-        setParams(newParams);
+        commit((newParams) => setParamValue(key, v, newParams));
       };
     }
 
@@ -209,12 +248,51 @@ const SetterNameFactory = <T extends string>(str: T) => {
   ].join("") as SetterName<T>;
 };
 
-function isDefault(v: any): v is ZodDefault {
-  return (v as ZodDefault)?.def?.defaultValue !== undefined;
+interface SchemaDef {
+  type?: string;
+  innerType?: unknown;
+  defaultValue?: unknown;
 }
 
-function getDefaultValue<T extends ZodDefault>(schema: T) {
-  return schema.def.defaultValue as T extends ZodDefault<infer U>
-    ? z.infer<U>
-    : never;
+function getDef(schema: unknown): SchemaDef | undefined {
+  return (schema as { def?: SchemaDef } | undefined)?.def;
+}
+
+/**
+ * Finds a `.default()` anywhere in the default/nullable wrapper chain, so both
+ * `.nullable().default(x)` and `.default(x).nullable()` are detected.
+ */
+function findDefault(schema: unknown): { value: unknown } | undefined {
+  let def = getDef(schema);
+
+  while (def) {
+    if (def.type === "default") return { value: def.defaultValue };
+    if (def.type !== "nullable") return undefined;
+    def = getDef(def.innerType);
+  }
+
+  return undefined;
+}
+
+function getBaseType(schema: unknown): string | undefined {
+  let def = getDef(schema);
+
+  while (def && (def.type === "default" || def.type === "nullable")) {
+    def = getDef(def.innerType);
+  }
+
+  return def?.type;
+}
+
+/**
+ * `z.coerce.boolean()` uses `Boolean(value)`, so the string "false" would be
+ * parsed as `true`. Convert the serialized booleans back before parsing.
+ */
+function deserializeValue(schema: unknown, value: string): unknown {
+  if (getBaseType(schema) === "boolean") {
+    if (value === "true") return true;
+    if (value === "false") return false;
+  }
+
+  return value;
 }
