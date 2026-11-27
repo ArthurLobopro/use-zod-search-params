@@ -96,3 +96,11 @@ Every property must have `.nullable()` or `.default()`. Otherwise, the function 
 
 PRs and issues are welcome. Please include a description and reproduction steps for bugs.
 
+Run the checks before opening a PR:
+
+```bash
+bun run lint
+bun run test           # unit tests (Vitest)
+bun run test:coverage  # tests with coverage report
+```
+

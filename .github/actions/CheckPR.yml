@@ -24,3 +24,9 @@ jobs:
 
       - name: Run Build
         run: bun run build:check
+
+      - name: Typecheck Tests
+        run: bun run test:types
+
+      - name: Run Tests
+        run: bun run test
