@@ -6,12 +6,12 @@ A small React Hook to synchronize and validate URL search parameters using `reac
 
 ## Installation
 
-Install the package and its runtime dependencies:
+Install the package. `react`, `react-router-dom` and `zod` are peer dependencies, so install them in your project too (if you do not have them already):
 
 ```bash
-npm install @arthur-lobo/use-zod-search-params
+npm install @arthur-lobo/use-zod-search-params react react-router-dom zod
 # or
-yarn add @arthur-lobo/use-zod-search-params
+yarn add @arthur-lobo/use-zod-search-params react react-router-dom zod
 ```
 
 > Ensure your project is using a React Router version that supports `useSearchParams`.
